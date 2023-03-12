@@ -1,0 +1,1 @@
+export const ssr = false; //a whole file with one line needed to make this an SPA
