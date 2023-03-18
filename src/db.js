@@ -49,6 +49,91 @@ const humanSchema = {
   indexes: ['age', 'timestampCreated']
 }
 
+const localitySchema = {
+  title: 'locality schema',
+  version: 2,
+  primaryKey: 'localityID',
+  type: 'object',
+  properties: {
+    localityID: {
+      type: 'string'
+    },
+    originalLocalityID: {
+      description: 'The ID from the original database (just integers)',
+      type: 'number'
+    },
+    originalHabitatAreaID: {
+      description: 'The ID of the habitat area from the original database (just integers)',
+      type: 'number'
+    },
+    country: {
+      type: 'string'
+    },
+    stateProvince: {
+      type: 'string'
+    },
+    locality: {
+      type: 'string'
+    },
+    verbatimLatitude: {
+      type: 'string'
+    },
+    verbatimLongitude: {
+      type: 'string'
+    },
+    decimalLatitude: {
+      type: 'number'
+    },
+    decimalLongitude: {
+      type: 'number'
+    },
+    decimalCoordinates: {
+      type: 'string'
+    },
+    coordsSource: {
+      description: 'How the original coordinates were obtained, different to dwc:georeferenceSources',
+      type: 'string'
+    },
+    geodeticDatum: {
+      type: 'string'
+    },
+    uncertainty: {
+      type: 'number'
+    },
+    uncertaintyUnit: {
+      type: 'string'
+    },
+    verbatimElevation: {
+      type: 'string'
+    },
+    habitat: {
+      type: 'string'
+    },
+    createdBy: {
+      type: 'string'
+    },
+    timestampCreated: {
+      description: 'The time the record was created, used for sorting later',
+      type: 'number',
+      minimum: 1678651018000, //now
+      maximum: 4108564614000, //12 March 2100
+      multipleOf: 1,
+      default: Date.now()
+    },
+    modifiedBy: {
+      type: 'string'
+    },
+    timestampModified: {
+      description: 'The time the record was modified, used for sorting later',
+      type: 'number',
+      minimum: 1678651018000, //now
+      maximum: 4108564614000, //12 March 2100
+      multipleOf: 1,
+      default: Date.now()
+    }
+  }
+}
+
 await myDatabase.addCollections({
   humans: {
     schema: humanSchema,
@@ -59,6 +144,17 @@ await myDatabase.addCollections({
       }
     }
   },
+  localities: {
+    schema: localitySchema,
+    migrationStrategies: {
+      1: function(oldDoc){
+        return oldDoc
+      },
+      2: function(oldDoc){
+        return oldDoc
+      }
+    }
+  }
 });
 
 export default myDatabase

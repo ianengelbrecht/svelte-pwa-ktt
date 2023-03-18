@@ -1,3 +1,37 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer components {
+  .btn {
+    @apply py-2 px-4 font-bold rounded focus:shadow-md focus:outline-none;
+  }
+
+  .btn-primary {
+    @apply bg-blue-500 hover:bg-blue-700 focus:bg-blue-700 text-white;
+  }
+
+  .btn-utility {
+    @apply bg-green-500 hover:bg-green-700 focus:bg-green-700 focus:shadow-md text-white rounded-full;
+  }
+
+  .btn-icon {
+    @apply w-6 text-gray-400 border-2 border-inherit rounded;
+  }
+
+  .btn-datanav {
+    @apply w-8 py-2 px-2 ml-1 rounded font-bold focus:shadow-md focus:outline-none;
+  }
+
+  .form-std {
+    @apply relative mx-auto bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4;
+  }
+
+  .input-std {
+    @apply shadow appearance-none border rounded w-full py-2 px-3 mt-2 font-normal text-gray-700 leading-tight focus:outline-none;
+  }
+
+  .form-label {
+    @apply block text-gray-700 text-sm font-bold mb-2;
+  }
+}
