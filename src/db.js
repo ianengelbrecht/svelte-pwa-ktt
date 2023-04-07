@@ -51,7 +51,7 @@ const humanSchema = {
 
 const localitySchema = {
   title: 'locality schema',
-  version: 2,
+  version: 3,
   primaryKey: 'localityID',
   type: 'object',
   properties: {
@@ -118,7 +118,6 @@ const localitySchema = {
       minimum: 1678651018000, //now
       maximum: 4108564614000, //12 March 2100
       multipleOf: 1,
-      default: Date.now()
     },
     modifiedBy: {
       type: 'string'
@@ -128,8 +127,7 @@ const localitySchema = {
       type: 'number',
       minimum: 1678651018000, //now
       maximum: 4108564614000, //12 March 2100
-      multipleOf: 1,
-      default: Date.now()
+      multipleOf: 1
     }
   }
 }
@@ -151,6 +149,10 @@ await myDatabase.addCollections({
         return oldDoc
       },
       2: function(oldDoc){
+        return oldDoc
+      },
+      3: function(oldDoc){
+        oldDoc.timestampCreated = Date.now()
         return oldDoc
       }
     }

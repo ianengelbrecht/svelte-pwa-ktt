@@ -3,11 +3,13 @@
   import { customAlphabet  } from 'nanoid'
   import "../app.css";
   import db from '../db.js'
+    import { async } from 'rxjs';
 
   const nanoid = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ', 5)
 
   let loadLocsButton
   let locsFileInput
+  let searchVal
 
   let formData = {
     passportId: null,
@@ -78,8 +80,11 @@
 
   const getRecordCount = async _ => {
     try {
-      let records = await db.humans.find().exec()
-      recordCount = records.length
+      recordCount = await db.humans.count({
+        selector: {
+          firstName: 'Michael'
+        }
+      }).exec()
     }
     catch(err) {
       alert('Error counting records: ' + err.message)
@@ -236,6 +241,22 @@
     }
   }
 
+  const showSearchCount = async ev => {
+    if (ev.key == 'Enter' && searchVal != null && searchVal != '') {
+      let count = await db.humans.find({
+        selector: {
+          firstName: {
+            $regex: `^${searchVal}`,
+            $options: 'i'
+          }
+        }
+      }).exec()
+
+      alert(`People named ${searchVal}: ${count.length}`)
+    }
+    
+  }
+
 
 </script>
 
@@ -255,6 +276,7 @@
       on:change={handleLoadLocalities}/>
     <button class="btn btn-utility" type="button" bind:this={loadLocsButton} on:click={_ => locsFileInput.click()}>Load localities</button>
   </div>
+  <input class="input-std my-5" type="text" bind:value={searchVal} placeholder="Search..." on:keypress={showSearchCount}/>
   <form class="form-std max-w-xs" on:wheel={handleFormWheelEvent} on:keypress={handleOnEnter}>
     <div class="mb-4">
       <!-- add and delete buttons -->
