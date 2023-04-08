@@ -1,9 +1,8 @@
 import { createRxDatabase } from 'rxdb';
 import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie';
 import { addRxPlugin } from 'rxdb';
-import { RxDBJsonDumpPlugin } from 'rxdb/plugins/json-dump';
 import { RxDBMigrationPlugin } from 'rxdb/plugins/migration';
-addRxPlugin(RxDBJsonDumpPlugin);
+
 addRxPlugin(RxDBMigrationPlugin);
 
 const myDatabase = await createRxDatabase({

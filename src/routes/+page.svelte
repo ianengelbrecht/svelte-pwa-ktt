@@ -2,12 +2,10 @@
   import {onMount} from 'svelte'
   import { customAlphabet  } from 'nanoid'
   import "../app.css";
-  import db from '../db.js'
-    import { async } from 'rxjs';
-
+  import { getRecordCount, getRecordAtIndex, addNewRecord, updateRecord,  deleteRecordAtIndex, getBackup, query} from '../dbhumans.js'
+  
   const nanoid = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ', 5)
 
-  let loadLocsButton
   let locsFileInput
   let searchVal
 
@@ -19,78 +17,33 @@
     timestampCreated: null
   }
 
-  let recordCount = 0
-  let currentRecord = null
-  let currentRecordIndex = 0
+  let currentRecord = null //for storing the current record from the db
+  let recordCount = null
+  let currentRecordIndex = null
 
   onMount(async _ => {
-    await getRecordCount()
-    await getRecordAtIndex()
+    recordCount = await getRecordCount()
+    if (recordCount > 0) {
+      currentRecordIndex = 0
+      currentRecord = await getRecordAtIndex(currentRecordIndex)
+      mapCurrentRecordToFormData()
+    }
   })
 
-  const dataHasChanged = _ => {
-    // const originalData = currentRecord.getLatest().toJSON()
-    // console.log('db data:')
-    // console.log(originalData)
-    // console.log('current')
-    // console.log(formData)
-    for (const key of Object.keys(formData)){
-      if(originalData.hasOwnProperty(key)){
-        if (formData[key] != originalData[key]){
-          return true
+  function mapCurrentRecordToFormData(){
+    if(currentRecord) {
+      for (const key of Object.keys(formData)) {
+        if(currentRecord.hasOwnProperty(key)) {
+          formData[key] = currentRecord[key]
         }
-      }
-      else {
-        return true
-      }
-    }
-    return false
-  }
-
-  const saveRecord = async ev => {
-    if (currentRecord == null) { //it's a new record
-      try {
-        formData.timestampCreated = Date.now()
-        await db.humans.insert(formData)
-        getRecordCount()
-        clearRecordData()
-      }
-      catch(err) {
-        console.error(err)
-        alert('error saving record - see the console')
-      }
-    }
-    else {
-      if (dataHasChanged()){
-        console.log('data has changed')
-        try {
-          await currentRecord.patch(formData)
-          getRecordAtIndex() //we have to refetch the record from the database after the patch...
+        else {
+          formData[key] = null
         }
-        catch(err) {
-          console.error(err)
-          alert('error saving record - see the console')
-        }
-      }
-      else {
-        console.log('data has not changed')
       }
     }
   }
 
-  const getRecordCount = async _ => {
-    try {
-      recordCount = await db.humans.count({
-        selector: {
-          firstName: 'Michael'
-        }
-      }).exec()
-    }
-    catch(err) {
-      alert('Error counting records: ' + err.message)
-    }
-  }
-
+  //this is backup stuff...
   async function getNewFileHandle() {
     const options = {
       types: [
@@ -116,71 +69,66 @@
     await writable.close();
   }
 
-  const saveJSON = async _ => {
+  const saveBackupJSON = async _ => {
     const handle = await getNewFileHandle()
-    let allData = await db.exportJSON() //badly named function
+    let allData = await getBackup()
     await writeFile(handle, JSON.stringify(allData, null, 2))
     alert('backup saved')
-  }
-
-  const getRecordAtIndex = async _ => {
-    const dbRecords = await db.humans.find({
-      skip:currentRecordIndex,
-      limit: 1,
-      sort:[{timestampCreated: 'asc'}]
-    }).exec()
-
-    currentRecord = dbRecords[0]
-    formData = currentRecord.toJSON()
   }
 
   const toPreviousRecord = async ev => {
     if(currentRecordIndex != null) {
       if (currentRecordIndex > 0) {
         currentRecordIndex--
-        await getRecordAtIndex()
+        currentRecord = await getRecordAtIndex(currentRecordIndex)
+        mapCurrentRecordToFormData()
       }
+      //also do nothing
     }
     else {
-      currentRecordIndex = recordCount - 1
-      await getRecordAtIndex()
+      currentRecordIndex = recordCount -1
+      currentRecord = await getRecordAtIndex(currentRecordIndex)
+      mapCurrentRecordToFormData()
     }
-  }
-
-  const createBlankRecord = _ => {
-    clearRecordData()
-    currentRecordIndex = undefined
-    currentRecord = null
   }
 
   const toNextRecord = async _ => {
     if (currentRecordIndex != null) {
       if (currentRecordIndex < recordCount - 1) {
         currentRecordIndex++
-        await getRecordAtIndex()
+        currentRecord = await getRecordAtIndex(currentRecordIndex)
+        mapCurrentRecordToFormData()
       }
       else {
-        createBlankRecord()
+        createBlankRecord() //we want a new empty record
+        currentRecordIndex = null
       }
     }
+    //else do nothing
   }
 
-  const toFirstRecord = async _ => {
-    currentRecordIndex = 0
-    await getRecordAtIndex()
-  }
-
-  const toLastRecord = async _ => {
-    currentRecordIndex = recordCount - 1
-    await getRecordAtIndex()
-  }
-
-  const clearRecordData = _ => {
-    console.log('running clearRecordData')
+  const createBlankRecord = _ => {
+    currentRecord = null
     for (const key of Object.keys(formData)){
       formData[key] = null
     }
     document.getElementById('passport').focus()
+  }
+
+  const toFirstRecord = async _ => {
+    if (recordCount > 0) {
+      currentRecordIndex = 0
+      currentRecord = await getRecordAtIndex(currentRecordIndex)
+      mapCurrentRecordToFormData()
+    }
+  }
+
+  const toLastRecord = async _ => {
+    if(recordCount > 0) {
+      currentRecordIndex = recordCount - 1
+      currentRecord = await getRecordAtIndex(currentRecordIndex)
+      mapCurrentRecordToFormData()
+    }
   }
 
   const handleFormWheelEvent = ev => {
@@ -192,22 +140,102 @@
     }
   }
 
-  const handleOnEnter = ev => {
+  const dataHasChanged = _ => {
+    if (currentRecord != null){
+      for (const key of Object.keys(formData)) {
+        if(formData[key] != null && !currentRecord.hasOwnProperty(key)){
+          console.log('record does not have key', key)
+          return true
+        }
+        if(currentRecord[key] != formData[key]){
+          console.log('values do not match for', key)
+          return true
+        }
+      }
+    }
+    return false
+  }
+
+  const saveRecord = async _ => {
+    if(dataHasChanged()) {
+      if(currentRecordIndex != null) {
+        console.log('data has changed...')
+        try{
+          currentRecord = await updateRecord(formData)
+          //nothing else changes
+        }
+        catch(err){
+          console.error(err)
+          alert('error saving record, see console...')
+          return
+        }
+      }
+      else {
+        try{
+          currentRecord = await addNewRecord(formData)
+          recordCount = await getRecordCount()
+          createBlankRecord()
+          //currentRecordIndex stays null
+        }
+        catch(err){
+          console.error(err)
+          alert('error saving record, see console...')
+          return
+        }
+      }
+    }
+    else {
+      console.log('data has NOT changed...')
+    }
+  }
+
+  const handleOnEnter = async ev => {
     if (ev.key == 'Enter'){
-      if(ev.target.id != 'backbutton' && ev.target.id != 'forwardbutton') {
-        saveRecord()
+      if(ev.target.tagName.toLowerCase() == 'input') {
+        ev.preventDefault()
+        try{
+          await saveRecord(formData)
+        }
+        catch(err){
+          console.error(err)
+          alert('error saving record, see console...')
+        }
       }
     }
   }
 
+  //handler for add record button
   const addRecord = _ => {
-    createBlankRecord()
+    if(recordCount > 0) {
+      currentRecordIndex = null
+      createBlankRecord()
+    }
+    //else the form will be blank already
   }
 
   const deleteRecord = async _ => {
-    await currentRecord.remove()
-    await getRecordCount()
-    await getRecordAtIndex()
+    if(currentRecordIndex != null){
+      try {
+        await deleteRecordAtIndex(currentRecordIndex)
+        recordCount = await getRecordCount()
+        if(recordCount > 0) {
+          if(currentRecordIndex == recordCount) {
+            currentRecordIndex--
+          }
+          currentRecord = await getRecordAtIndex(currentRecordIndex)
+          mapCurrentRecordToFormData()
+        }
+        else {
+          currentRecordIndex = null
+          currentRecord = null
+          createBlankRecord()
+        }
+      }
+      catch(err) {
+        console.error(err)
+        alert('error deleting record, see console')
+      }
+    }
   }
 
   const handleLoadLocalities = async _ => {
@@ -243,16 +271,14 @@
 
   const showSearchCount = async ev => {
     if (ev.key == 'Enter' && searchVal != null && searchVal != '') {
-      let count = await db.humans.find({
-        selector: {
-          firstName: {
-            $regex: `^${searchVal}`,
-            $options: 'i'
-          }
-        }
-      }).exec()
-
-      alert(`People named ${searchVal}: ${count.length}`)
+      try {
+        let searchResults = await query(searchVal)
+        alert(`People named ${searchVal}: ${searchResults.length}\r\n${searchResults.map(x => x.firstName + ' '+ x.lastName).join('\r\n')}`)
+      }
+      catch(err) {
+        console.error(err)
+        alert('error running query, see console')
+      }     
     }
     
   }
@@ -263,7 +289,7 @@
 <div class="container mx-auto px-4">
   <div class="p-4">
     Record count: {recordCount}
-    <button class="btn btn-utility" type="button" on:click={saveJSON}>
+    <button class="btn btn-utility" type="button" on:click={saveBackupJSON}>
       Download
     </button>
   </div>
@@ -274,10 +300,10 @@
       style="display:none" 
       bind:this={locsFileInput}
       on:change={handleLoadLocalities}/>
-    <button class="btn btn-utility" type="button" bind:this={loadLocsButton} on:click={_ => locsFileInput.click()}>Load localities</button>
+    <button class="btn btn-utility" type="button" on:click={_ => locsFileInput.click()}>Load localities</button>
   </div>
   <input class="input-std my-5" type="text" bind:value={searchVal} placeholder="Search..." on:keypress={showSearchCount}/>
-  <form class="form-std max-w-xs" on:wheel={handleFormWheelEvent} on:keypress={handleOnEnter}>
+  <form id="personform" class="form-std max-w-xs" on:wheel={handleFormWheelEvent} on:keypress={handleOnEnter}>
     <div class="mb-4">
       <!-- add and delete buttons -->
       <div class="absolute top-6 right-8">
@@ -312,7 +338,7 @@
       </label>
     </div>
     <!-- bottom buttons -->
-    <div class="flex items-center justify-between">
+    <div id="buttons" class="flex items-center justify-between">
       <div class="flex items-center">
         <button id="allbackbutton" class="w-8 bg-blue-500 hover:bg-blue-700 focus:bg-blue-700 focus:shadow-md text-white font-bold py-2 px-2 ml-1 rounded focus:outline-none" on:click|preventDefault={toFirstRecord}>
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="h-4">
