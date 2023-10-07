@@ -13,7 +13,7 @@ const myDatabase = await createRxDatabase({
 
 const humanSchema = {
   title: 'human schema',
-  version: 1,
+  version: 4,
   primaryKey: 'passportId',
   type: 'object',
   properties: {
@@ -137,6 +137,20 @@ await myDatabase.addCollections({
     migrationStrategies: {
       1: function(oldDoc){
         oldDoc.timestampCreated = Date.now()
+        return oldDoc
+      },
+      2: function(oldDoc) {
+        oldDoc.serverTimestamp = null
+        return oldDoc
+      },
+      3: function(oldDoc) {
+        if (!oldDoc.hasOwnProperty('_deleted')) {
+          oldDoc['_deleted'] = false
+        }
+        return oldDoc
+      },
+      4: function(oldDoc) {
+        delete oldDoc.serverTimestamp
         return oldDoc
       }
     }
