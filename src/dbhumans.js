@@ -106,45 +106,38 @@ async function getRawRecordAtIndex(index) {
 
 export const syncCollection = _ => {
   const coll = collection(firestore, 'demopeople')
-  try {
 
-    const replicationState = replicateFirestore(
-      {
-        collection: db.humans,
-        firestore: {
-            projectId: projectID,
-            database: firestore,
-            collection: coll
-        },
-        pull: { },
-        push: { },
-        /**
-         * Either do a live or a one-time replication
-         * [default=true]
-         */
-        live: true,
-        /**
-         * (optional) likely you should just use the default.
-         *
-         * In firestore it is not possible to read out
-         * the internally used write timestamp of a document.
-         * Even if we could read it out, it is not indexed which
-         * is required for fetch 'changes-since-x'.
-         * So instead we have to rely on a custom user defined field
-         * that contains the server time which is set by firestore via serverTimestamp()
-         * IMPORTANT: The serverTimestampField MUST NOT be part of the collections RxJsonSchema!
-         * [default='serverTimestamp']
-         */
-        serverTimestampField: 'serverTimestamp'
-      }
-    );
+  const replicationState = replicateFirestore(
+    {
+      collection: db.humans,
+      firestore: {
+          projectId: projectID,
+          database: firestore,
+          collection: coll
+      },
+      pull: { },
+      push: { },
+      /**
+       * Either do a live or a one-time replication
+       * [default=true]
+       */
+      live: true,
+      /**
+       * (optional) likely you should just use the default.
+       *
+       * In firestore it is not possible to read out
+       * the internally used write timestamp of a document.
+       * Even if we could read it out, it is not indexed which
+       * is required for fetch 'changes-since-x'.
+       * So instead we have to rely on a custom user defined field
+       * that contains the server time which is set by firestore via serverTimestamp()
+       * IMPORTANT: The serverTimestampField MUST NOT be part of the collections RxJsonSchema!
+       * [default='serverTimestamp']
+       */
+      serverTimestampField: 'serverTimestamp'
+    }
+  );
 
-    return replicationState
-
-  }
-  catch(err) {
-    console.log('there was an error with sync')
-    console.error(err)
-  }
+  return replicationState
 
 }
